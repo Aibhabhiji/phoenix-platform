@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "phoenix-platform"
+version = "0.1.0-alpha.1"
+description = "Phoenix - A production-grade platform for building autonomous AI agent applications."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+
+authors = [
+    { name = "Phoenix Contributors" }
+]
+
+keywords = [
+    "ai",
+    "agents",
+    "llm",
+    "workflow",
+    "platform",
+    "autonomous",
+    "phoenix"
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+    "Typing :: Typed"
+]
+
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "mypy>=1.11",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "SIM"
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+pretty = true
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests"
+]
