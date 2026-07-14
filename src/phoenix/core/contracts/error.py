@@ -1,8 +1,11 @@
 """
-Structured error contracts.
+Structured error model used throughout the Phoenix Platform.
 
-Expected failures in Phoenix are represented using PhoenixError rather
-than arbitrary exceptions.
+Expected failures are represented by PhoenixError and propagated through
+Result.failure(...).
+
+PhoenixError is immutable, serializable, and carries stable error codes
+that allow tracing and analytics across the platform.
 """
 
 from __future__ import annotations
@@ -13,9 +16,12 @@ from types import MappingProxyType
 from typing import Any, Mapping
 
 
+Metadata = Mapping[str, Any]
+
+
 class ErrorSeverity(str, Enum):
     """
-    Severity of an error.
+    Severity level of an error.
     """
 
     INFO = "info"
@@ -27,26 +33,35 @@ class ErrorSeverity(str, Enum):
 @dataclass(frozen=True, slots=True)
 class ErrorCode:
     """
-    Stable error identifier.
+    Stable identifier for an error.
 
-    Example:
-
+    Examples:
         CORE001
-        CFG104
-        WF208
+        CFG102
+        WF301
     """
 
     value: str
 
     def __post_init__(self) -> None:
-        if not self.value:
-            raise ValueError("Error code cannot be empty.")
+        value = self.value.strip()
+
+        if not value:
+            raise ValueError("ErrorCode cannot be empty.")
+
+        object.__setattr__(self, "value", value)
+
+    def __str__(self) -> str:
+        return self.value
 
 
 @dataclass(frozen=True, slots=True)
 class PhoenixError:
     """
-    Structured platform error.
+    Represents an expected failure within the Phoenix Platform.
+
+    Unlike Python exceptions, PhoenixError is intended to be returned
+    through Result.failure() so that workflows remain composable.
     """
 
     code: ErrorCode
@@ -55,18 +70,61 @@ class PhoenixError:
 
     severity: ErrorSeverity = ErrorSeverity.ERROR
 
-    metadata: Mapping[str, Any] = field(
-        default_factory=lambda: MappingProxyType({})
-    )
+    metadata: Metadata = field(default_factory=dict)
 
     cause: Exception | None = None
 
     def __post_init__(self) -> None:
+        if not self.message.strip():
+            raise ValueError("Error message cannot be empty.")
+
         object.__setattr__(
             self,
             "metadata",
             MappingProxyType(dict(self.metadata)),
         )
 
-        if not self.message:
-            raise ValueError("Error message cannot be empty.")
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Serialize the error into a JSON-compatible dictionary.
+        """
+
+        return {
+            "code": str(self.code),
+            "message": self.message,
+            "severity": self.severity.value,
+            "metadata": dict(self.metadata),
+            "cause": repr(self.cause) if self.cause else None,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "PhoenixError":
+        """
+        Deserialize a PhoenixError from a dictionary.
+        """
+
+        return cls(
+            code=ErrorCode(str(data["code"])),
+            message=str(data["message"]),
+            severity=ErrorSeverity(str(data["severity"])),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+    def with_metadata(self, **metadata: Any) -> "PhoenixError":
+        """
+        Return a new PhoenixError with merged metadata.
+        """
+
+        merged = dict(self.metadata)
+        merged.update(metadata)
+
+        return PhoenixError(
+            code=self.code,
+            message=self.message,
+            severity=self.severity,
+            metadata=merged,
+            cause=self.cause,
+        )
+
+    def __str__(self) -> str:
+        return f"[{self.code}] {self.message}"
