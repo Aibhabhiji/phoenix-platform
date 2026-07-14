@@ -54,14 +54,14 @@ class Result(Generic[T]):
     @property
     def value(self) -> T:
         if self._value is None:
-            raise RuntimeError("Cannot access value of a failed Result.")
+            raise ResultAccessError("Cannot access value of a failed Result.")
 
         return self._value
 
     @property
     def error(self) -> PhoenixError:
         if self._error is None:
-            raise RuntimeError("Cannot access error of a successful Result.")
+            raise ResultAccessError("Cannot access error of a successful Result.")
 
         return self._error
 
